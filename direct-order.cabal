@@ -30,7 +30,6 @@ common lang
     -fprint-explicit-foralls -fprint-explicit-kinds -Wunused-do-bind
 
   default-extensions:
-    NoFieldSelectors
     NoStarIsType
     BangPatterns
     BinaryLiterals
@@ -70,7 +69,6 @@ common lang
     NamedWildCards
     NumericUnderscores
     OverloadedLabels
-    OverloadedRecordDot
     OverloadedStrings
     PackageImports
     PartialTypeSignatures
@@ -91,15 +89,16 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
     ViewPatterns
+    NoFieldSelectors
+    OverloadedRecordDot
 
   default-language:   GHC2021
 
 library
   import:          lang
-  exposed-modules: 
+  exposed-modules:
     Order
-    Utils 
-   
+    Utils
 
   build-depends:
     , aeson
@@ -108,9 +107,9 @@ library
     , bytestring
     , cardano-binary
     , data-default
+    , liqwid-plutarch-extra
     , plutarch
     , plutarch-extra
-    , liqwid-plutarch-extra
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
@@ -158,6 +157,6 @@ executable direct-order
     , data-default
     , direct-order
     , plutarch
-    , ply-plutarch   
+    , ply-plutarch
 
   hs-source-dirs: app
