@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               direct-order
+name:               plutarch-template
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -30,6 +30,7 @@ common lang
     -fprint-explicit-foralls -fprint-explicit-kinds -Wunused-do-bind
 
   default-extensions:
+    NoFieldSelectors
     NoStarIsType
     BangPatterns
     BinaryLiterals
@@ -69,6 +70,7 @@ common lang
     NamedWildCards
     NumericUnderscores
     OverloadedLabels
+    OverloadedRecordDot
     OverloadedStrings
     PackageImports
     PartialTypeSignatures
@@ -89,16 +91,15 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
     ViewPatterns
-    NoFieldSelectors
-    OverloadedRecordDot
 
   default-language:   GHC2021
 
 library
   import:          lang
-  exposed-modules:
+  exposed-modules: 
     Order
-    Utils
+    Utils 
+   
 
   build-depends:
     , aeson
@@ -107,11 +108,12 @@ library
     , bytestring
     , cardano-binary
     , data-default
-    , liqwid-plutarch-extra
     , plutarch
     , plutarch-extra
+    , liqwid-plutarch-extra
     , plutus-core
     , plutus-ledger-api
+    , plutus-simple-model
     , plutus-tx
     , ply-core
     , ply-plutarch
@@ -137,13 +139,14 @@ common dependencies
     , plutarch-extra
     , plutus-core
     , plutus-ledger-api
+    , plutus-simple-model
     , plutus-tx
     , ply-core
     , ply-plutarch
     , serialise
     , text
 
-executable direct-order
+executable plutarch-template
   import:         lang, dependencies
   main-is:        Main.hs
 
@@ -152,11 +155,7 @@ executable direct-order
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
-  build-depends:
-    , base
-    , data-default
-    , direct-order
-    , plutarch
-    , ply-plutarch
+  build-depends: plutarch-template
+   
 
   hs-source-dirs: app

@@ -1,4 +1,4 @@
-# Revision history for direct-order-contracts
+# Revision history for my-first-flake
 
 ## 0.1.0.0 -- YYYY-mm-dd
 
