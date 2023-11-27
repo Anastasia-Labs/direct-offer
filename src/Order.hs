@@ -7,7 +7,14 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Order (directOrderValidator, directOrderGlobalLogic) where
+module Order (
+  directOrderValidator,
+  directOrderGlobalLogic,
+  PDirectOfferDatum (..),
+  PSmartHandleRedeemer (..),
+  PGlobalRedeemer (..),
+)
+where
 
 import Plutarch
 import Plutarch.Api.V1.Address (PCredential (PPubKeyCredential))
@@ -138,25 +145,25 @@ porderSuccessor foldCount orderInput orderOutput = unTermCont $ do
       (foldCount + 1)
       perror
 
-puniqueOrderedTxOuts :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :-->  (PBuiltinList PTxOut))
+puniqueOrderedTxOuts :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
 puniqueOrderedTxOuts =
   phoistAcyclic $
-    let go :: Term s ((PInteger :--> PTxOut) :--> PInteger  :--> (PBuiltinList (PAsData PInteger)) :-->  (PBuiltinList PTxOut))
-        go = plam $ \elemAt -> 
-          (pfix #$ plam $ \self uniquenessLabel order ->
-          pelimList
-            ( \x xs ->
-                let n = 2 #^ (pfromData x)
-                    n' = 2 * n
-                    y = uniquenessLabel + n
-                    output = elemAt # pfromData x
-                 in pif
-                      (uniquenessLabel #% n' #< y #% n')
-                        (pcons # output #$ self # y # xs)
-                      perror
-            )
-            (pcon PNil)
-            order
+    let go :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
+        go = plam $ \elemAt ->
+          ( pfix #$ plam $ \self uniquenessLabel order ->
+              pelimList
+                ( \x xs ->
+                    let n = 2 #^ (pfromData x)
+                        n' = 2 * n
+                        y = uniquenessLabel + n
+                        output = elemAt # pfromData x
+                     in pif
+                          (uniquenessLabel #% n' #< y #% n')
+                          (pcons # output #$ self # y # xs)
+                          perror
+                )
+                (pcon PNil)
+                order
           )
      in go
 
@@ -167,8 +174,8 @@ directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
   ctxF <- pletFields @'["txInfo"] ctx
   infoF <- pletFields @'["inputs", "outputs", "signatories"] ctxF.txInfo
 
-  let scInputs = puniqueOrderedTxOuts # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs 
-      scOutputs = puniqueOrderedTxOuts # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs 
+  let scInputs = puniqueOrderedTxOuts # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs
+      scOutputs = puniqueOrderedTxOuts # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs
 
   let checks = pfoldTxUTxOs 0 scInputs scOutputs #== pcountScriptInputs # infoF.inputs
 
