@@ -94,33 +94,6 @@ common lang
 
   default-language:   GHC2021
 
-library
-  import:          lang
-  exposed-modules:
-    Order
-    Utils
-
-  build-depends:
-    , aeson
-    , base
-    , base16-bytestring
-    , bytestring
-    , cardano-binary
-    , data-default
-    , liqwid-plutarch-extra
-    , plutarch
-    , plutarch-extra
-    , plutus-core
-    , plutus-ledger-api
-    , plutus-tx
-    , ply-core
-    , ply-plutarch
-    , prettyprinter
-    , serialise
-    , text
-
-  hs-source-dirs:  src
-
 common dependencies
   build-depends:
     , aeson
@@ -143,6 +116,26 @@ common dependencies
     , serialise
     , text
 
+common test-dependencies
+  build-depends:
+    , hedgehog
+    , hedgehog-quickcheck
+    , plutarch-context-builder
+    , plutarch-quickcheck
+    , plutarch-unit
+    , tasty
+    , tasty-hedgehog
+    , tasty-hunit
+    , text
+
+library
+  import:          lang, dependencies
+  exposed-modules:
+    Order
+    Utils
+
+  hs-source-dirs:  src
+
 executable direct-order
   import:         lang, dependencies
   main-is:        Main.hs
@@ -160,3 +153,14 @@ executable direct-order
     , ply-plutarch
 
   hs-source-dirs: app
+
+test-suite direct-order-test
+  import:         lang, dependencies, test-dependencies
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: test
+  other-modules:
+    Spec.SpendingValidatorSpec
+    Spec.StakingValidatorSpec
+
+  build-depends:  direct-order
