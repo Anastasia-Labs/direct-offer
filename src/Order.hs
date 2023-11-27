@@ -138,11 +138,12 @@ porderSuccessor foldCount orderInput orderOutput = unTermCont $ do
       (foldCount + 1)
       perror
 
-puniqueOrderedTxOuts :: Term s ((PBuiltinList (PAsData PInteger)) :--> (PInteger :--> PTxOut) :--> (PBuiltinList PTxOut))
+puniqueOrderedTxOuts :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :-->  (PBuiltinList PTxOut))
 puniqueOrderedTxOuts =
   phoistAcyclic $
-    let go :: Term s (PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PInteger :--> PTxOut) :--> (PBuiltinList PTxOut))
-        go = pfix #$ plam $ \self uniquenessLabel order elemAt ->
+    let go :: Term s ((PInteger :--> PTxOut) :--> PInteger  :--> (PBuiltinList (PAsData PInteger)) :-->  (PBuiltinList PTxOut))
+        go = plam $ \elemAt -> 
+          (pfix #$ plam $ \self uniquenessLabel order ->
           pelimList
             ( \x xs ->
                 let n = 2 #^ (pfromData x)
@@ -151,12 +152,13 @@ puniqueOrderedTxOuts =
                     output = elemAt # pfromData x
                  in pif
                       (uniquenessLabel #% n' #< y #% n')
-                      (pcons # output #$ self # y # xs # elemAt)
+                        (pcons # output #$ self # y # xs)
                       perror
             )
             (pcon PNil)
             order
-     in go # 0
+          )
+     in go
 
 directOrderGlobalLogic :: Term s PStakeValidator
 directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
@@ -165,8 +167,8 @@ directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
   ctxF <- pletFields @'["txInfo"] ctx
   infoF <- pletFields @'["inputs", "outputs", "signatories"] ctxF.txInfo
 
-  let scInputs = puniqueOrderedTxOuts # redF.inputIdxs # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs)
-      scOutputs = puniqueOrderedTxOuts # redF.outputIdxs # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs)
+  let scInputs = puniqueOrderedTxOuts # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs 
+      scOutputs = puniqueOrderedTxOuts # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs 
 
   let checks = pfoldTxUTxOs 0 scInputs scOutputs #== pcountScriptInputs # infoF.inputs
 
