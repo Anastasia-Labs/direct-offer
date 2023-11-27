@@ -21,6 +21,13 @@ maintainer:         colll78@colll78
 -- category:
 extra-source-files: CHANGELOG.md
 
+flag unchecked
+  description:
+    If unchecked is True, some checks are disabled. Disable checks to create optimized scripts.
+
+  default:     False
+  manual:      True
+
 common lang
   ghc-options:
     -Werror -Wall -Wcompat -Wincomplete-uni-patterns
@@ -130,11 +137,19 @@ common test-dependencies
 
 library
   import:          lang, dependencies
+  hs-source-dirs:  src
+
+  if flag(unchecked)
+    hs-source-dirs: src-optimized
+
+  else
+    hs-source-dirs: src-checked
+
   exposed-modules:
     Order
     Utils
 
-  hs-source-dirs:  src
+  other-modules:   Conversions
 
 executable direct-order
   import:         lang, dependencies

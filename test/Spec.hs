@@ -16,7 +16,8 @@ main = do
     testGroup
       "Unit Test"
       [ SpendingValidatorSpec.sampleTest
-      , StakingValidatorSpec.sampleTest ]
+      , StakingValidatorSpec.sampleTest
+      ]
 
 mainEval1 :: IO ()
 mainEval1 = do

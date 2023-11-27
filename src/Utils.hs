@@ -21,11 +21,13 @@ import Plutarch (
   compile,
  )
 import Plutarch.Api.V1 (PCredential (..))
+import Plutarch.Api.V1.AssocMap (plookup)
 import Plutarch.Api.V2
 import Plutarch.Bool
 import Plutarch.Evaluate (
   evalScript,
  )
+import Plutarch.Maybe (pfromJust)
 import Plutarch.Prelude
 import Plutarch.Script (Script, serialiseScript)
 import PlutusLedgerApi.V2 (
@@ -175,6 +177,9 @@ pbreakTokenName :: Term s PTokenName -> Term s (PPair PByteString PByteString)
 pbreakTokenName tn =
   let tnBS = pto tn
    in pcon $ PPair (psliceBS # 0 # 4 # tnBS) (psliceBS # 4 # (plengthBS # tnBS) # tnBS)
+
+presolveHashByDatum :: Term s (PDatumHash :--> PMap 'Unsorted PDatumHash PDatum :--> PDatum)
+presolveHashByDatum = phoistAcyclic $ plam $ \hash datums -> pfromJust #$ plookup # hash # datums
 
 encodeSerialiseCBOR :: Script -> Text
 encodeSerialiseCBOR = Text.decodeUtf8 . Base16.encode . CBOR.serialize' . serialiseScript

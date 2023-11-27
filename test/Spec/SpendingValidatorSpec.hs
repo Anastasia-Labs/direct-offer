@@ -7,26 +7,26 @@ module Spec.SpendingValidatorSpec (
 where
 
 import Order (
-  directOrderValidator,
   PDirectOfferDatum (..),
   PSmartHandleRedeemer (..),
+  directOrderValidator,
  )
-import Plutarch.Prelude
+import Plutarch.Api.V1.Value (padaSymbol, padaToken, pconstantPositiveSingleton)
 import Plutarch.Builtin (pdataImpl)
+import Plutarch.Prelude
 import Plutarch.Test.Precompiled (
   Expectation (..),
   testEvalCase,
   tryFromPTerm,
  )
-import Plutarch.Api.V1.Value (pconstantPositiveSingleton, padaSymbol, padaToken)
-import PlutusLedgerApi.V1.Address (pubKeyHashAddress, Address)
+import PlutusLedgerApi.V1.Address (Address, pubKeyHashAddress)
 import PlutusLedgerApi.V2 (
+  Credential (..),
   CurrencySymbol (..),
   PubKeyHash,
   ScriptContext (..),
   ScriptHash (..),
   StakingCredential (..),
-  Credential (..),
   TokenName (..),
   adaSymbol,
   adaToken,
@@ -45,13 +45,13 @@ import "plutarch-context-builder" Plutarch.Context (
   script,
   signedWith,
   txId,
-  withdrawal,
   withDatum,
   withRedeemer,
   withRefIndex,
   withRefTxId,
   withSpendingOutRefIdx,
   withValue,
+  withdrawal,
  )
 
 sampleScriptHash1 :: ScriptHash
@@ -145,7 +145,7 @@ commonPurpose = withSpendingOutRefIdx 1
 
 -- Execute Order
 goodCtx1 :: ScriptContext
-goodCtx1 = 
+goodCtx1 =
   buildSpending checkPhase1 $
     mconcat
       [ withdrawal sampleStakingCredential1 0
@@ -160,7 +160,7 @@ goodCtx1 =
 
 -- Reclaim Order
 goodCtx2 :: ScriptContext
-goodCtx2 = 
+goodCtx2 =
   buildSpending checkPhase1 $
     mconcat
       [ inputScript2
@@ -178,10 +178,9 @@ goodCtx2 =
           , withValue (singleton sellCurrencySymbol sellTokenName 1)
           ]
 
-
 -- Incorrect Staking Script Withdrawal
 badCtx1 :: ScriptContext
-badCtx1 = 
+badCtx1 =
   buildSpending checkPhase1 $
     mconcat
       [ withdrawal sampleStakingCredential2 0
@@ -194,9 +193,9 @@ badCtx1 =
       , commonPurpose
       ]
 
--- Invalid Reclaim, Missing Creator Signrature 
+-- Invalid Reclaim, Missing Creator Signrature
 badCtx2 :: ScriptContext
-badCtx2 = 
+badCtx2 =
   buildSpending checkPhase1 $
     mconcat
       [ inputScript2

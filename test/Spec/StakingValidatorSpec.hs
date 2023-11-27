@@ -7,27 +7,27 @@ module Spec.StakingValidatorSpec (
 where
 
 import Order (
-  directOrderGlobalLogic,
   PDirectOfferDatum (..),
-  PSmartHandleRedeemer (..),
   PGlobalRedeemer (..),
+  PSmartHandleRedeemer (..),
+  directOrderGlobalLogic,
  )
-import Plutarch.Prelude
+import Plutarch.Api.V1.Value (padaSymbol, padaToken, pconstantPositiveSingleton)
 import Plutarch.Builtin (pdataImpl)
+import Plutarch.Prelude
 import Plutarch.Test.Precompiled (
   Expectation (..),
   testEvalCase,
   tryFromPTerm,
  )
-import Plutarch.Api.V1.Value (pconstantPositiveSingleton, padaSymbol, padaToken)
-import PlutusLedgerApi.V1.Address (pubKeyHashAddress, Address)
+import PlutusLedgerApi.V1.Address (Address, pubKeyHashAddress)
 import PlutusLedgerApi.V2 (
+  Credential (..),
   CurrencySymbol (..),
   PubKeyHash,
   ScriptContext (..),
   ScriptHash (..),
   StakingCredential (..),
-  Credential (..),
   TokenName (..),
   adaSymbol,
   adaToken,
@@ -36,9 +36,9 @@ import PlutusLedgerApi.V2 (
 import PlutusTx qualified
 import Test.Tasty (TestTree)
 import "plutarch-context-builder" Plutarch.Context (
-  address,
   Builder,
   RewardingBuilder,
+  address,
   buildRewarding',
   input,
   output,
@@ -46,13 +46,13 @@ import "plutarch-context-builder" Plutarch.Context (
   script,
   signedWith,
   txId,
-  withdrawal,
   withDatum,
   withRedeemer,
   withRefIndex,
   withRefTxId,
   withRewarding,
   withValue,
+  withdrawal,
  )
 
 sampleScriptHash1 :: ScriptHash
@@ -92,10 +92,10 @@ executeRdmr :: Term s PSmartHandleRedeemer
 executeRdmr = pcon $ PExecuteOrder pdnil
 
 inputIdxs1 :: Term s (PBuiltinList (PAsData PInteger))
-inputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 0) # pnil
+inputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
 
 outputIdxs1 :: Term s (PBuiltinList (PAsData PInteger))
-outputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 0) # pnil
+outputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
 
 globalRdmr1 :: Term s PGlobalRedeemer
 globalRdmr1 = pcon $ PGlobalRedeemer $ pdcons @"inputIdxs" # pdata inputIdxs1 #$ pdcons @"outputIdxs" # pdata outputIdxs1 # pdnil
@@ -163,7 +163,7 @@ commonPurpose = withRewarding sampleStakingCredential1
 
 -- Execute Order
 goodCtx1 :: ScriptContext
-goodCtx1 = 
+goodCtx1 =
   buildRewarding' $
     mconcat
       [ withdrawal sampleStakingCredential1 0
