@@ -7,8 +7,16 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Order (directOrderValidator, directOrderGlobalLogic) where
+module Order (
+  directOrderValidator,
+  directOrderGlobalLogic,
+  PDirectOfferDatum (..),
+  PSmartHandleRedeemer (..),
+  PGlobalRedeemer (..),
+)
+where
 
+import Conversions (pconvert)
 import Plutarch
 import Plutarch.Api.V1.Address (PCredential (PPubKeyCredential))
 import Plutarch.Api.V1.AssocMap (plookup)
@@ -19,7 +27,9 @@ import Plutarch.Monadic qualified as P
 import Plutarch.Prelude
 import Plutarch.Unsafe
 import PlutusLedgerApi.V1
-import Utils (pand'List, pcond, pcountScriptInputs, ptryOwnInput, (#>), (#>=))
+import Utils (pand'List, pcond, pcountScriptInputs, presolveHashByDatum, ptryOwnInput, (#>), (#>=))
+import "liqwid-plutarch-extra" Plutarch.Extra.Numeric ((#^))
+import "liqwid-plutarch-extra" Plutarch.Extra.Rational ((#%))
 import "liqwid-plutarch-extra" Plutarch.Extra.ScriptContext (pisScriptAddress)
 import "liqwid-plutarch-extra" Plutarch.Extra.TermCont
 
@@ -39,6 +49,8 @@ data PDirectOfferDatum (s :: S)
 instance DerivePlutusType PDirectOfferDatum where
   type DPTStrat _ = PlutusTypeData
 
+instance PTryFrom PData PDirectOfferDatum
+
 data PSmartHandleRedeemer (s :: S)
   = PExecuteOrder (Term s (PDataRecord '[]))
   | PReclaim (Term s (PDataRecord '[]))
@@ -48,10 +60,12 @@ data PSmartHandleRedeemer (s :: S)
 instance DerivePlutusType PSmartHandleRedeemer where
   type DPTStrat _ = PlutusTypeData
 
+instance PTryFrom PData PSmartHandleRedeemer
+
 directOrderValidator :: Term s (PStakingCredential :--> PValidator)
 directOrderValidator = phoistAcyclic $ plam $ \stakeCred dat redeemer ctx -> P.do
-  let redeemer' = punsafeCoerce @_ @_ @PSmartHandleRedeemer redeemer
-      dat' = punsafeCoerce @_ @_ @PDirectOfferDatum dat
+  let redeemer' = pconvert @PSmartHandleRedeemer redeemer
+      dat' = pconvert @PDirectOfferDatum dat
   ctxF <- pletFields @'["txInfo"] ctx
   infoF <- pletFields @'["wdrl", "signatories"] ctxF.txInfo
   pmatch redeemer' $ \case
@@ -80,6 +94,8 @@ data PGlobalRedeemer (s :: S)
 instance DerivePlutusType PGlobalRedeemer where
   type DPTStrat _ = PlutusTypeData
 
+instance PTryFrom PData PGlobalRedeemer
+
 pfoldl2 ::
   (PListLike listA, PListLike listB, PElemConstraint listA a, PElemConstraint listB b) =>
   Term s ((acc :--> a :--> b :--> acc) :--> acc :--> listA a :--> listB b :--> acc)
@@ -97,30 +113,37 @@ pfoldl2 =
         la
 
 pfoldTxUTxOs ::
+  Term s (PMap 'Unsorted PDatumHash PDatum) ->
   Term s PInteger ->
   Term s (PBuiltinList PTxOut) ->
   Term s (PBuiltinList PTxOut) ->
   Term s PInteger
-pfoldTxUTxOs acc la lb =
+pfoldTxUTxOs datums acc la lb =
   pfoldl2
     # plam
       ( \state utxoIn utxoOut ->
-          porderSuccessor state utxoIn utxoOut
+          porderSuccessor datums state utxoIn utxoOut
       )
     # acc
     # la
     # lb
 
 porderSuccessor ::
+  Term s (PMap 'Unsorted PDatumHash PDatum) ->
   Term s PInteger ->
   Term s PTxOut ->
   Term s PTxOut ->
   Term s PInteger
-porderSuccessor foldCount orderInput orderOutput = unTermCont $ do
+porderSuccessor datums foldCount orderInput orderOutput = unTermCont $ do
   orderInputF <- pletFieldsC @'["address", "value", "datum"] orderInput
   orderOutputF <- pletFieldsC @'["address", "value", "datum"] orderOutput
   -- orderInput should contain a datum of the type PDirectOfferDatum
-  let inputDatum = punsafeCoerce @_ @_ @PDirectOfferDatum orderInputF.datum
+  let orderInputDatum =
+        orderInputF.datum `pmatch` \case
+          POutputDatum r -> (pfield @"outputDatum" # r)
+          POutputDatumHash r -> presolveHashByDatum # (pfield @"datumHash" # r) # datums
+          PNoOutputDatum _ -> ptraceError "No output datum"
+  let inputDatum = pconvert @PDirectOfferDatum (pto orderInputDatum)
 
   pure $
     pif
@@ -136,17 +159,39 @@ porderSuccessor foldCount orderInput orderOutput = unTermCont $ do
       (foldCount + 1)
       perror
 
+puniqueOrderedTxOuts :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
+puniqueOrderedTxOuts =
+  phoistAcyclic $
+    let go :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
+        go = plam $ \elemAt ->
+          ( pfix #$ plam $ \self uniquenessLabel order ->
+              pelimList
+                ( \x xs ->
+                    let n = 2 #^ (pfromData x)
+                        n' = 2 * n
+                        y = uniquenessLabel + n
+                        output = elemAt # pfromData x
+                     in pif
+                          (uniquenessLabel #% n' #< y #% n')
+                          (pcons # output #$ self # y # xs)
+                          perror
+                )
+                (pcon PNil)
+                order
+          )
+     in go
+
 directOrderGlobalLogic :: Term s PStakeValidator
 directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
-  let red = punsafeCoerce @_ @_ @PGlobalRedeemer _red
+  let red = pconvert @PGlobalRedeemer _red
   redF <- pletFields @'["inputIdxs", "outputIdxs"] red
   ctxF <- pletFields @'["txInfo"] ctx
-  infoF <- pletFields @'["inputs", "outputs", "signatories"] ctxF.txInfo
+  infoF <- pletFields @'["inputs", "outputs", "signatories", "datums"] ctxF.txInfo
 
-  let scInputs = pmap @PBuiltinList # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # pfromData idx # infoF.inputs) # redF.inputIdxs
-      scOutputs = pmap @PBuiltinList # plam (\idx -> pelemAt @PBuiltinList # pfromData idx # infoF.outputs) # redF.outputIdxs
+  let scInputs = puniqueOrderedTxOuts # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs
+      scOutputs = puniqueOrderedTxOuts # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs
 
-  let checks = pfoldTxUTxOs 0 scInputs scOutputs #== pcountScriptInputs # infoF.inputs
+  let checks = pfoldTxUTxOs infoF.datums 0 scInputs scOutputs #== pcountScriptInputs # infoF.inputs
 
   pif
     checks
