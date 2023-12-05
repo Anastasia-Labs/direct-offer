@@ -130,6 +130,7 @@ common test-dependencies
     , plutarch-context-builder
     , plutarch-quickcheck
     , plutarch-unit
+    , prettyprinter
     , tasty
     , tasty-hedgehog
     , tasty-hunit

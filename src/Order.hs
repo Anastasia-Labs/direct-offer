@@ -172,9 +172,9 @@ puniqueOrderedTxOuts =
                         y = uniquenessLabel + n
                         output = elemAt # pfromData x
                      in pif
-                          (uniquenessLabel #% n' #< y #% n')
+                          ((pmod # uniquenessLabel # n') #< (pmod # y # n'))
                           (pcons # output #$ self # y # xs)
-                          perror
+                          (ptraceError "duplicate index detected")
                 )
                 (pcon PNil)
                 order
