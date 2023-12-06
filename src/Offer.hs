@@ -10,7 +10,6 @@ module Offer (
   PDirectOfferDatum (..),
   PDirectOfferRedeemer (..),
   PGlobalRedeemer (..),
-  
 )
 where
 

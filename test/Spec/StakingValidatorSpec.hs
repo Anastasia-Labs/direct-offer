@@ -9,8 +9,8 @@ where
 
 import Offer (
   PDirectOfferDatum (..),
-  PGlobalRedeemer (..),
   PDirectOfferRedeemer (..),
+  PGlobalRedeemer (..),
   directOfferGlobalLogic,
   puniqueOrdered,
  )
