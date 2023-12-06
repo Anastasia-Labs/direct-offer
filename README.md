@@ -19,7 +19,7 @@
 
 ## Introduction
 
-The Direct Offer project provides a Plutarch-based implementation of a smart contract enabling peer-to-peer trading, in a trustless manner, for the Cardano blockchain. Without the need for a trusted third party or a Decentralized Exchange (DEX), a user can put up any Cardano native asset(s) for sale in exchange for any user-speicified native asset(s).
+The Direct Offer project provides a Plutarch-based implementation of a smart contract enabling peer-to-peer trading, in a trustless manner, for the Cardano blockchain. Without the need for a trusted third party or a Decentralized Exchange (DEX), a user can put up any Cardano native asset(s) for sale in exchange for any user-specified native asset(s).
 
 This project is funded by the Cardano Treasury in [Catalyst Fund 10](https://projectcatalyst.io/funds/10/f10-developer-ecosystem-the-evolution/plug-and-play-smart-contract-api-a-game-changing-platform-to-deploy-open-source-contracts-instantly)
 
@@ -71,7 +71,7 @@ A single transaction can fulfill multiple sell orders by matching it with valid 
 directOfferGlobalLogic :: Term s PStakeValidator
 ```
 
-This Staking validator's credentail is used as a parameter to a Spending Validator (the smart contract which locks the seller UTxOs). Spending validator ensures that the Staking validator is executed in the tx. A successful validation from both spending and staking validator is essentail for the spending of seller UTxOs.
+This Staking validator's credential is used as a parameter to a Spending Validator (the smart contract which locks the seller UTxOs). Spending validator ensures that the Staking validator is executed in the tx. A successful validation from both spending and staking validator is essentail for the spending of seller UTxOs.
 ```
 directOfferValidator :: Term s (PStakingCredential :--> PValidator)
 ```
