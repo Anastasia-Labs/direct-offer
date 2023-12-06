@@ -3,13 +3,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Order (
-  directOrderValidator,
-  directOrderGlobalLogic,
-  PDirectOfferDatum (..),
-  PSmartHandleRedeemer (..),
-  PGlobalRedeemer (..),
+module Offer (
+  directOfferValidator,
+  directOfferGlobalLogic,
   puniqueOrdered,
+  PDirectOfferDatum (..),
+  PDirectOfferRedeemer (..),
+  PGlobalRedeemer (..),
+  
 )
 where
 
@@ -47,25 +48,25 @@ instance DerivePlutusType PDirectOfferDatum where
 
 instance PTryFrom PData PDirectOfferDatum
 
-data PSmartHandleRedeemer (s :: S)
-  = PExecuteOrder (Term s (PDataRecord '[]))
+data PDirectOfferRedeemer (s :: S)
+  = PExecuteOffer (Term s (PDataRecord '[]))
   | PReclaim (Term s (PDataRecord '[]))
   deriving stock (Generic)
   deriving anyclass (PlutusType, PIsData)
 
-instance DerivePlutusType PSmartHandleRedeemer where
+instance DerivePlutusType PDirectOfferRedeemer where
   type DPTStrat _ = PlutusTypeData
 
-instance PTryFrom PData PSmartHandleRedeemer
+instance PTryFrom PData PDirectOfferRedeemer
 
-directOrderValidator :: Term s (PStakingCredential :--> PValidator)
-directOrderValidator = phoistAcyclic $ plam $ \stakeCred dat redeemer ctx -> P.do
-  let redeemer' = pconvert @PSmartHandleRedeemer redeemer
+directOfferValidator :: Term s (PStakingCredential :--> PValidator)
+directOfferValidator = phoistAcyclic $ plam $ \stakeCred dat redeemer ctx -> P.do
+  let redeemer' = pconvert @PDirectOfferRedeemer redeemer
       dat' = pconvert @PDirectOfferDatum dat
   ctxF <- pletFields @'["txInfo"] ctx
   infoF <- pletFields @'["wdrl", "signatories"] ctxF.txInfo
   pmatch redeemer' $ \case
-    PExecuteOrder _ ->
+    PExecuteOffer _ ->
       pmatch (plookup # stakeCred # infoF.wdrl) $ \case
         PNothing -> perror
         PJust _ -> popaque $ pconstant ()
@@ -118,38 +119,38 @@ pfoldTxUTxOs datums acc la lb =
   pfoldl2
     # plam
       ( \state utxoIn utxoOut ->
-          porderSuccessor datums state utxoIn utxoOut
+          pofferSuccessor datums state utxoIn utxoOut
       )
     # acc
     # la
     # lb
 
-porderSuccessor ::
+pofferSuccessor ::
   Term s (PMap 'Unsorted PDatumHash PDatum) ->
   Term s PInteger ->
   Term s PTxOut ->
   Term s PTxOut ->
   Term s PInteger
-porderSuccessor datums foldCount orderInput orderOutput = unTermCont $ do
-  orderInputF <- pletFieldsC @'["address", "value", "datum"] orderInput
-  orderOutputF <- pletFieldsC @'["address", "value", "datum"] orderOutput
-  -- orderInput should contain a datum of the type PDirectOfferDatum
-  let orderInputDatum =
-        orderInputF.datum `pmatch` \case
+pofferSuccessor datums foldCount offerInput offerOutput = unTermCont $ do
+  offerInputF <- pletFieldsC @'["address", "value", "datum"] offerInput
+  offerOutputF <- pletFieldsC @'["address", "value", "datum"] offerOutput
+  -- offerInput should contain a datum of the type PDirectOfferDatum
+  let offerInputDatum =
+        offerInputF.datum `pmatch` \case
           POutputDatum r -> (pfield @"outputDatum" # r)
           POutputDatumHash r -> presolveHashByDatum # (pfield @"datumHash" # r) # datums
           PNoOutputDatum _ -> ptraceError "No output datum"
-  let inputDatum = pconvert @PDirectOfferDatum (pto orderInputDatum)
+  let inputDatum = pconvert @PDirectOfferDatum (pto offerInputDatum)
 
   pure $
     pif
       ( pand'List
-          [ -- The address of all orderInput's must be a script address
-            ptraceIfFalse "Not a script input" (pisScriptAddress # orderInputF.address)
-          , -- The address of orderOutput must match orderInput.datum.creator
-            ptraceIfFalse "Order not sent to creator" (orderOutputF.address #== pfield @"creator" # inputDatum)
-          , -- The value of orderOutput must be equal to or greater than orderInput.datum.toBuy
-            ptraceIfFalse "Order value less than expected" (passertPositive # (passertSorted # orderOutputF.value) #>= pfield @"toBuy" # inputDatum)
+          [ -- The address of all offerInput's must be a script address
+            ptraceIfFalse "Not a script input" (pisScriptAddress # offerInputF.address)
+          , -- The address of offerOutput must match offerInput.datum.creator
+            ptraceIfFalse "Offer not sent to creator" (offerOutputF.address #== pfield @"creator" # inputDatum)
+          , -- The value of offerOutput must be equal to or greater than offerInput.datum.toBuy
+            ptraceIfFalse "Offer value less than expected" (passertPositive # (passertSorted # offerOutputF.value) #>= pfield @"toBuy" # inputDatum)
           ]
       )
       (foldCount + 1)
@@ -177,8 +178,8 @@ puniqueOrdered =
           )
      in go
 
-directOrderGlobalLogic :: Term s PStakeValidator
-directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
+directOfferGlobalLogic :: Term s PStakeValidator
+directOfferGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
   let red = pconvert @PGlobalRedeemer _red
   redF <- pletFields @'["inputIdxs", "outputIdxs"] red
   ctxF <- pletFields @'["txInfo"] ctx

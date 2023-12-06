@@ -40,4 +40,4 @@ ci:
 
 .PHONY: export
 export:
-	cabal run direct-order -f unchecked
+	cabal run direct-offer -f unchecked

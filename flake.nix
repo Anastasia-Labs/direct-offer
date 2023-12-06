@@ -1,5 +1,5 @@
 {
-  description = "Direct Order Contracts";
+  description = "Direct Offer";
 
   nixConfig = {
     extra-experimental-features = [ "nix-command" "flakes" "ca-derivations" ];

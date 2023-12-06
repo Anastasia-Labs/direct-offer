@@ -6,10 +6,10 @@ module Spec.SpendingValidatorSpec (
 )
 where
 
-import Order (
+import Offer (
   PDirectOfferDatum (..),
-  PSmartHandleRedeemer (..),
-  directOrderValidator,
+  PDirectOfferRedeemer (..),
+  directOfferValidator,
  )
 import Plutarch.Api.V1.Value (padaSymbol, padaToken, pconstantPositiveSingleton)
 import Plutarch.Builtin (pdataImpl)
@@ -84,10 +84,10 @@ buyerPKH = "ea2484f839e72f5bd60e004e74b564bb75f79a980b22c55d88f4b8bb"
 datum1 :: Term s PDirectOfferDatum
 datum1 = pcon $ PDirectOfferDatum $ pdcons @"creator" # pdata (pconstant creatorAddress) #$ pdcons @"toBuy" # pdata (pconstantPositiveSingleton padaSymbol padaToken 10_000_000) # pdnil
 
-executeRdmr :: Term s PSmartHandleRedeemer
-executeRdmr = pcon $ PExecuteOrder pdnil
+executeRdmr :: Term s PDirectOfferRedeemer
+executeRdmr = pcon $ PExecuteOffer pdnil
 
-reclaimRdmr :: Term s PSmartHandleRedeemer
+reclaimRdmr :: Term s PDirectOfferRedeemer
 reclaimRdmr = pcon $ PReclaim pdnil
 
 inputScript1 :: (Builder a) => a
@@ -143,7 +143,7 @@ outputBuyer =
 commonPurpose :: SpendingBuilder
 commonPurpose = withSpendingOutRefIdx 1
 
--- Execute Order
+-- Execute Offer
 goodCtx1 :: ScriptContext
 goodCtx1 =
   buildSpending checkPhase1 $
@@ -158,7 +158,7 @@ goodCtx1 =
       , commonPurpose
       ]
 
--- Reclaim Order
+-- Reclaim Offer
 goodCtx2 :: ScriptContext
 goodCtx2 =
   buildSpending checkPhase1 $
@@ -206,16 +206,16 @@ badCtx2 =
       ]
 
 sampleTest :: TestTree
-sampleTest = tryFromPTerm "Test Order" (directOrderValidator # pconstant sampleStakingCredential1) $ do
+sampleTest = tryFromPTerm "Test Offer" (directOfferValidator # pconstant sampleStakingCredential1) $ do
   testEvalCase
-    "Pass - Execute order"
+    "Pass - Execute offer"
     Success
     [ plift $ pdataImpl datum1 -- Datum Unit
     , plift $ pdataImpl executeRdmr -- Redeemer Unit
     , PlutusTx.toData goodCtx1 -- ScriptContext
     ]
   testEvalCase
-    "Pass - Reclaim order"
+    "Pass - Reclaim offer"
     Success
     [ plift $ pdataImpl datum1 -- Datum Unit
     , plift $ pdataImpl reclaimRdmr -- Redeemer Unit
@@ -229,7 +229,7 @@ sampleTest = tryFromPTerm "Test Order" (directOrderValidator # pconstant sampleS
     , PlutusTx.toData badCtx1 -- ScriptContext
     ]
   testEvalCase
-    "Fail - Invalid Reclaim, Missing Creator Signrature"
+    "Fail - Invalid Reclaim, Missing Creator Signature"
     Failure
     [ plift $ pdataImpl datum1 -- Datum Unit
     , plift $ pdataImpl reclaimRdmr -- Redeemer Unit
@@ -238,7 +238,7 @@ sampleTest = tryFromPTerm "Test Order" (directOrderValidator # pconstant sampleS
 
 sampleTestEval :: Term s POpaque
 sampleTestEval =
-  directOrderValidator
+  directOfferValidator
     # (pconstant sampleStakingCredential1)
     # (pdataImpl datum1)
     # (pdataImpl executeRdmr)

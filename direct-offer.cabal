@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               direct-order
+name:               direct-offer
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -148,12 +148,12 @@ library
     hs-source-dirs: src-checked
 
   exposed-modules:
-    Order
+    Offer
     Utils
 
   other-modules:   Conversions
 
-executable direct-order
+executable direct-offer
   import:         lang, dependencies
   main-is:        Main.hs
 
@@ -165,13 +165,13 @@ executable direct-order
   build-depends:
     , base
     , data-default
-    , direct-order
+    , direct-offer
     , plutarch
     , ply-plutarch
 
   hs-source-dirs: app
 
-test-suite direct-order-test
+test-suite direct-offer-test
   import:         lang, dependencies, test-dependencies
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
@@ -180,4 +180,4 @@ test-suite direct-order-test
     Spec.SpendingValidatorSpec
     Spec.StakingValidatorSpec
 
-  build-depends:  direct-order
+  build-depends:  direct-offer

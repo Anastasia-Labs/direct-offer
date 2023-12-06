@@ -7,11 +7,11 @@ module Spec.StakingValidatorSpec (
 )
 where
 
-import Order (
+import Offer (
   PDirectOfferDatum (..),
   PGlobalRedeemer (..),
-  PSmartHandleRedeemer (..),
-  directOrderGlobalLogic,
+  PDirectOfferRedeemer (..),
+  directOfferGlobalLogic,
   puniqueOrdered,
  )
 import Plutarch.Api.V1.Value (padaSymbol, padaToken, pconstantPositiveSingleton)
@@ -92,8 +92,8 @@ buyerPKH = "ea2484f839e72f5bd60e004e74b564bb75f79a980b22c55d88f4b8bb"
 datum1 :: Term s PDirectOfferDatum
 datum1 = pcon $ PDirectOfferDatum $ pdcons @"creator" # pdata (pconstant creatorAddress) #$ pdcons @"toBuy" # pdata (pconstantPositiveSingleton padaSymbol padaToken 10_000_000) # pdnil
 
-executeRdmr :: Term s PSmartHandleRedeemer
-executeRdmr = pcon $ PExecuteOrder pdnil
+executeRdmr :: Term s PDirectOfferRedeemer
+executeRdmr = pcon $ PExecuteOffer pdnil
 
 inputIdxs1 :: Term s (PBuiltinList (PAsData PInteger))
 inputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
@@ -200,7 +200,7 @@ outputBuyer2 =
 commonPurpose :: RewardingBuilder
 commonPurpose = withRewarding sampleStakingCredential1
 
--- Execute Order
+-- Execute Offer
 goodCtx1 :: ScriptContext
 goodCtx1 =
   buildRewarding' $
@@ -275,9 +275,9 @@ badCtx3 =
       ]
 
 sampleTest :: TestTree
-sampleTest = tryFromPTerm "Test Order" directOrderGlobalLogic $ do
+sampleTest = tryFromPTerm "Test Offer" directOfferGlobalLogic $ do
   testEvalCase
-    "Pass - Execute 2 orders"
+    "Pass - Execute 2 offers"
     Success
     [ plift $ pdataImpl globalRdmr1 -- Redeemer Unit
     , PlutusTx.toData goodCtx1 -- ScriptContext
@@ -303,7 +303,7 @@ sampleTest = tryFromPTerm "Test Order" directOrderGlobalLogic $ do
 
 sampleTestEval :: Term s POpaque
 sampleTestEval =
-  directOrderGlobalLogic
+  directOfferGlobalLogic
     # (pdataImpl globalRdmr1)
     # (pconstant goodCtx1)
 

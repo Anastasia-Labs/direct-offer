@@ -55,10 +55,10 @@ data PDirectOfferDatum (s :: S)
       )
 ```
 
-A buyer interested in the offered assets initiates a transaction (with a "PExecuteOrder" redeemer) spending the locked UTxO by sending it to himself, along with sending the "toBuy" assets to the "creator". This condition is validated by the contract first before allowing the transaction to proceed further. However, if the seller decides to cancel the offer he can do so by initiating a transaction (with a "PReclaim" redeemer) and claim all the locked assets back.
+A buyer interested in the offered assets initiates a transaction (with a "PExecuteOffer" redeemer) spending the locked UTxO by sending it to himself, along with sending the "toBuy" assets to the "creator". This condition is validated by the contract first before allowing the transaction to proceed further. However, if the seller decides to cancel the offer he can do so by initiating a transaction (with a "PReclaim" redeemer) and claim all the locked assets back.
 ```
-data PSmartHandleRedeemer (s :: S)
-  = PExecuteOrder (Term s (PDataRecord '[]))
+data PDirectOfferRedeemer (s :: S)
+  = PExecuteOffer (Term s (PDataRecord '[]))
   | PReclaim (Term s (PDataRecord '[]))
 ```
 
@@ -68,12 +68,12 @@ One UTxO at the smart contract address translates to one sell order.
 
 A single transaction can fulfill multiple sell orders by matching it with valid buy orders. Whether all the buy orders in the tx are correct or not is validated only once at the tx level using the [Zero ADA Withdrawal Trick](https://github.com/cardano-foundation/CIPs/pull/418#issuecomment-1366605115) from the Staking validator.
 ```
-directOrderGlobalLogic :: Term s PStakeValidator
+directOfferGlobalLogic :: Term s PStakeValidator
 ```
 
 This Staking validator's credentail is used as a parameter to a Spending Validator (the smart contract which locks the seller UTxOs). Spending validator ensures that the Staking validator is executed in the tx. A successful validation from both spending and staking validator is essentail for the spending of seller UTxOs.
 ```
-directOrderValidator :: Term s (PStakingCredential :--> PValidator)
+directOfferValidator :: Term s (PStakingCredential :--> PValidator)
 ```
 
 For carrying out this validation, the Staking Validator requires a redeemer containing one-to-one correlation between script input UTxOs (seller UTxOs) and buy output UTxOs (sent to seller from buyer). This is provided via ordered lists of input/output indices of inputs/ouputs present in the Script Context.
