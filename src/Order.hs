@@ -2,10 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Order (
   directOrderValidator,
@@ -13,6 +9,7 @@ module Order (
   PDirectOfferDatum (..),
   PSmartHandleRedeemer (..),
   PGlobalRedeemer (..),
+  puniqueOrdered,
 )
 where
 
@@ -25,11 +22,10 @@ import Plutarch.Api.V2
 import Plutarch.DataRepr (PDataFields)
 import Plutarch.Monadic qualified as P
 import Plutarch.Prelude
-import Plutarch.Unsafe
-import PlutusLedgerApi.V1
-import Utils (pand'List, pcond, pcountScriptInputs, presolveHashByDatum, ptryOwnInput, (#>), (#>=))
+import Plutarch.Unsafe ()
+import PlutusLedgerApi.V1 ()
+import Utils (pand'List, pcountScriptInputs, presolveHashByDatum, (#>=))
 import "liqwid-plutarch-extra" Plutarch.Extra.Numeric ((#^))
-import "liqwid-plutarch-extra" Plutarch.Extra.Rational ((#%))
 import "liqwid-plutarch-extra" Plutarch.Extra.ScriptContext (pisScriptAddress)
 import "liqwid-plutarch-extra" Plutarch.Extra.TermCont
 
@@ -159,10 +155,10 @@ porderSuccessor datums foldCount orderInput orderOutput = unTermCont $ do
       (foldCount + 1)
       perror
 
-puniqueOrderedTxOuts :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
-puniqueOrderedTxOuts =
+puniqueOrdered :: (PElemConstraint PBuiltinList a) => Term s ((PInteger :--> a) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList a))
+puniqueOrdered =
   phoistAcyclic $
-    let go :: Term s ((PInteger :--> PTxOut) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList PTxOut))
+    let go :: (PElemConstraint PBuiltinList a) => Term s ((PInteger :--> a) :--> PInteger :--> (PBuiltinList (PAsData PInteger)) :--> (PBuiltinList a))
         go = plam $ \elemAt ->
           ( pfix #$ plam $ \self uniquenessLabel order ->
               pelimList
@@ -188,8 +184,8 @@ directOrderGlobalLogic = phoistAcyclic $ plam $ \_red ctx -> P.do
   ctxF <- pletFields @'["txInfo"] ctx
   infoF <- pletFields @'["inputs", "outputs", "signatories", "datums"] ctxF.txInfo
 
-  let scInputs = puniqueOrderedTxOuts # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs
-      scOutputs = puniqueOrderedTxOuts # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs
+  let scInputs = puniqueOrdered # plam (\idx -> pfield @"resolved" #$ pelemAt @PBuiltinList # idx # infoF.inputs) # 0 # redF.inputIdxs
+      scOutputs = puniqueOrdered # plam (\idx -> pelemAt @PBuiltinList # idx # infoF.outputs) # 0 # redF.outputIdxs
 
   let checks = pfoldTxUTxOs infoF.datums 0 scInputs scOutputs #== pcountScriptInputs # infoF.inputs
 
