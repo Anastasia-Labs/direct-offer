@@ -6,7 +6,6 @@ import Test.Tasty (
  )
 
 import Data.Text.IO qualified as TIO
-import Prettyprinter qualified as P
 import Spec.SpendingValidatorSpec qualified as SpendingValidatorSpec
 import Spec.StakingValidatorSpec qualified as StakingValidatorSpec
 import Utils (evalT)
@@ -15,11 +14,11 @@ main :: IO ()
 main = do
   defaultMain $
     testGroup
-      "Unit Test"
+      "Direct Offer Tests"
       [ SpendingValidatorSpec.sampleTest
       , StakingValidatorSpec.sampleTest
+      , StakingValidatorSpec.puniqueOrderedTests
       ]
-  mainEval1
   mainEval2
 
 mainEval1 :: IO ()
