@@ -155,5 +155,5 @@ Execute the test suite:
 cabal test
 ```
 
-![plutarch-merkle-tree.gif](/assets/images/plutarch-merkle-tree.gif)
+![direct-offer.gif](/assets/gifs/direct-offer.gif)
 
