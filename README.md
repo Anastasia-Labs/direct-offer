@@ -156,8 +156,6 @@ Execute the test suite:
 cabal test
 ```
 
-![direct-offer.gif](/assets/gifs/direct-offer.gif)
-
 ## License
 
 © 2023 Anastasia Labs.
