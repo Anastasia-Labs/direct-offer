@@ -12,6 +12,7 @@
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Building and Developing](#building-and-developing)
+  - [License](#license)
 
 <!-- markdown-toc end -->
 
@@ -157,3 +158,9 @@ cabal test
 
 ![direct-offer.gif](/assets/gifs/direct-offer.gif)
 
+## License
+
+© 2023 Anastasia Labs.
+
+All code is licensed under MIT License. See [LICENSE](./LICENSE) file
+for details.
