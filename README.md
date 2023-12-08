@@ -32,7 +32,7 @@ P2P trading in the context of this project refers to the direct buying and selli
 
 Trading on a CEX requires you to give custody of your tokens to them, so they can execute the trades you enter based on their charts and market order aggregators. A CEX provides access to their order book and facilitates trades and takes fees in exchange.
 
-Depending on the type of order you use, effects such as slippage may mean you don’t get the exact price you want. P2P trading, on the other hand, gives you full control over pricing, settlement time, and whom you choose to sell to and buy from.
+Depending on the type of order you use, effects such as slippage may mean you don’t get the exact price you want. P2P trading, on the other hand, gives you full control over pricing, settlement time, and whom you choose to sell to and buy from. What is even better you don't need to give custody of your assets to a centralized entity, they are locked in a contract from which you can reclaim them up until the point they are bought.
 
 ### How can this project facilitate P2P trading?
 
