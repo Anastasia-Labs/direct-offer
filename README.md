@@ -30,7 +30,7 @@ This project is funded by the Cardano Treasury in [Catalyst Fund 10](https://pro
 
 P2P trading in the context of this project refers to the direct buying and selling of Cardano Native Tokens (both Fungible & Non-Fungible Tokens) among users, without a third party or an intermediary. This is unlike buying and selling digital assets using a Centralized Exchange (CEX), where you cannot transact directly with counterparties or a DEX where you trade against a fixed Liquidity Pool.
 
-A CEX would use charts and market order aggregators to gauge the current market prices and determine the optimal time to buy, sell, or hold your assets. When you are ready to buy or sell, the exchange enters your order into its order book and facilitates the transaction on your behalf.
+Trading on a CEX requires you to give custody of your tokens to them, so they can execute the trades you enter based on their charts and market order aggregators. A CEX provides access to their order book and facilitates trades and takes fees in exchange.
 
 Depending on the type of order you use, effects such as slippage may mean you don’t get the exact price you want. P2P trading, on the other hand, gives you full control over pricing, settlement time, and whom you choose to sell to and buy from.
 
