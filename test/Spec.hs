@@ -14,10 +14,12 @@ main :: IO ()
 main = do
   defaultMain $
     testGroup
-      "Unit Test"
+      "Direct Offer Tests"
       [ SpendingValidatorSpec.sampleTest
       , StakingValidatorSpec.sampleTest
+      , StakingValidatorSpec.puniqueOrderedTests
       ]
+  mainEval2
 
 mainEval1 :: IO ()
 mainEval1 = do

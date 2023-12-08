@@ -1,16 +1,18 @@
 module Spec.StakingValidatorSpec (
-  sampleTest,
   creatorPKH,
+  sampleTest,
   goodCtx1,
   sampleTestEval,
+  puniqueOrderedTests,
 )
 where
 
-import Order (
+import Offer (
   PDirectOfferDatum (..),
+  PDirectOfferRedeemer (..),
   PGlobalRedeemer (..),
-  PSmartHandleRedeemer (..),
-  directOrderGlobalLogic,
+  directOfferGlobalLogic,
+  puniqueOrdered,
  )
 import Plutarch.Api.V1.Value (padaSymbol, padaToken, pconstantPositiveSingleton)
 import Plutarch.Builtin (pdataImpl)
@@ -20,6 +22,7 @@ import Plutarch.Test.Precompiled (
   testEvalCase,
   tryFromPTerm,
  )
+import Plutarch.Test.QuickCheck (TestableTerm (..), fromFailingPPartial, fromPFun)
 import PlutusLedgerApi.V1.Address (Address, pubKeyHashAddress)
 import PlutusLedgerApi.V2 (
   Credential (..),
@@ -34,11 +37,12 @@ import PlutusLedgerApi.V2 (
   singleton,
  )
 import PlutusTx qualified
-import Test.Tasty (TestTree)
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (Gen, Property, chooseInt, chooseInteger, forAll, shuffle, sublistOf, testProperty)
 import "plutarch-context-builder" Plutarch.Context (
   Builder,
   RewardingBuilder,
-  address,
   buildRewarding',
   input,
   output,
@@ -88,8 +92,8 @@ buyerPKH = "ea2484f839e72f5bd60e004e74b564bb75f79a980b22c55d88f4b8bb"
 datum1 :: Term s PDirectOfferDatum
 datum1 = pcon $ PDirectOfferDatum $ pdcons @"creator" # pdata (pconstant creatorAddress) #$ pdcons @"toBuy" # pdata (pconstantPositiveSingleton padaSymbol padaToken 10_000_000) # pdnil
 
-executeRdmr :: Term s PSmartHandleRedeemer
-executeRdmr = pcon $ PExecuteOrder pdnil
+executeRdmr :: Term s PDirectOfferRedeemer
+executeRdmr = pcon $ PExecuteOffer pdnil
 
 inputIdxs1 :: Term s (PBuiltinList (PAsData PInteger))
 inputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
@@ -97,8 +101,23 @@ inputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
 outputIdxs1 :: Term s (PBuiltinList (PAsData PInteger))
 outputIdxs1 = pcons # (pdata 0) #$ pcons # (pdata 1) # pnil
 
+inputIdxs2 :: Term s (PBuiltinList (PAsData PInteger))
+inputIdxs2 = pcons # (pdata 0) #$ pcons # (pdata 1) #$ pcons # (pdata 0) # pnil
+
+outputIdxs2 :: Term s (PBuiltinList (PAsData PInteger))
+outputIdxs2 = pcons # (pdata 0) #$ pcons # (pdata 1) #$ pcons # (pdata 0) # pnil
+
+inputIdxs3 :: Term s (PBuiltinList (PAsData PInteger))
+inputIdxs3 = pcons # (pdata 0) #$ pcons # (pdata 2) # pnil
+
 globalRdmr1 :: Term s PGlobalRedeemer
 globalRdmr1 = pcon $ PGlobalRedeemer $ pdcons @"inputIdxs" # pdata inputIdxs1 #$ pdcons @"outputIdxs" # pdata outputIdxs1 # pdnil
+
+globalRdmr2 :: Term s PGlobalRedeemer
+globalRdmr2 = pcon $ PGlobalRedeemer $ pdcons @"inputIdxs" # pdata inputIdxs2 #$ pdcons @"outputIdxs" # pdata outputIdxs2 # pdnil
+
+globalRdmr3 :: Term s PGlobalRedeemer
+globalRdmr3 = pcon $ PGlobalRedeemer $ pdcons @"inputIdxs" # pdata inputIdxs3 #$ pdcons @"outputIdxs" # pdata outputIdxs1 # pdnil
 
 inputScript1 :: (Builder a) => a
 inputScript1 =
@@ -124,6 +143,18 @@ inputScript2 =
       , withDatum (plift $ pdataImpl datum1)
       ]
 
+inputScript3 :: (Builder a) => a
+inputScript3 =
+  input $
+    mconcat
+      [ script sampleScriptHash2
+      , withValue (singleton sellCurrencySymbol2 sellTokenName2 1)
+      , withRefTxId "399d3795c282bc2680d5541faa409f789cde81df369d03d057e4b58954ed865b"
+      , withRefIndex 1
+      , withRedeemer (plift $ pdataImpl executeRdmr)
+      , withDatum (plift $ pdataImpl datum1)
+      ]
+
 inputBuyer :: (Builder a) => a
 inputBuyer =
   input $
@@ -138,15 +169,23 @@ outputCreator :: (Builder a) => a
 outputCreator =
   output $
     mconcat
-      [ address creatorAddress
+      [ pubKey creatorPKH
       , withValue (singleton adaSymbol adaToken 10_000_000)
+      ]
+
+outputCreatorInsufficient :: (Builder a) => a
+outputCreatorInsufficient =
+  output $
+    mconcat
+      [ pubKey creatorPKH
+      , withValue (singleton adaSymbol adaToken 5_000_000)
       ]
 
 outputBuyer1 :: (Builder a) => a
 outputBuyer1 =
   output $
     mconcat
-      [ address creatorAddress
+      [ pubKey buyerPKH
       , withValue (singleton sellCurrencySymbol1 sellTokenName1 1)
       ]
 
@@ -154,14 +193,14 @@ outputBuyer2 :: (Builder a) => a
 outputBuyer2 =
   output $
     mconcat
-      [ address creatorAddress
+      [ pubKey buyerPKH
       , withValue (singleton sellCurrencySymbol2 sellTokenName2 1)
       ]
 
 commonPurpose :: RewardingBuilder
 commonPurpose = withRewarding sampleStakingCredential1
 
--- Execute Order
+-- Execute Offer
 goodCtx1 :: ScriptContext
 goodCtx1 =
   buildRewarding' $
@@ -179,17 +218,126 @@ goodCtx1 =
       , commonPurpose
       ]
 
+-- Double Satisfaction
+badCtx1 :: ScriptContext
+badCtx1 =
+  buildRewarding' $
+    mconcat
+      [ withdrawal sampleStakingCredential1 0
+      , inputScript1
+      , inputScript2
+      , inputScript3
+      , inputBuyer
+      , outputCreator
+      , outputCreator
+      , outputBuyer1
+      , outputBuyer2
+      , outputBuyer2
+      , signedWith buyerPKH
+      , txId "b2dfbe34017b9061464f401ec924ece385bb3ec07061c27907844b4d3ef6666e"
+      , commonPurpose
+      ]
+
+-- Insufficient ask
+badCtx2 :: ScriptContext
+badCtx2 =
+  buildRewarding' $
+    mconcat
+      [ withdrawal sampleStakingCredential1 0
+      , inputScript1
+      , inputScript2
+      , inputBuyer
+      , outputCreator
+      , outputCreatorInsufficient
+      , outputBuyer1
+      , outputBuyer2
+      , signedWith buyerPKH
+      , txId "b2dfbe34017b9061464f401ec924ece385bb3ec07061c27907844b4d3ef6666e"
+      , commonPurpose
+      ]
+
+-- Not a script input
+badCtx3 :: ScriptContext
+badCtx3 =
+  buildRewarding' $
+    mconcat
+      [ withdrawal sampleStakingCredential1 0
+      , inputScript1
+      , inputScript2
+      , inputBuyer
+      , outputCreator
+      , outputCreatorInsufficient
+      , outputBuyer1
+      , outputBuyer2
+      , signedWith buyerPKH
+      , txId "b2dfbe34017b9061464f401ec924ece385bb3ec07061c27907844b4d3ef6666e"
+      , commonPurpose
+      ]
+
 sampleTest :: TestTree
-sampleTest = tryFromPTerm "Test Order" directOrderGlobalLogic $ do
+sampleTest = tryFromPTerm "Test Offer" directOfferGlobalLogic $ do
   testEvalCase
-    "Pass - Execute 2 orders"
+    "Pass - Execute 2 offers"
     Success
     [ plift $ pdataImpl globalRdmr1 -- Redeemer Unit
     , PlutusTx.toData goodCtx1 -- ScriptContext
     ]
+  testEvalCase
+    "Fail - Double Satisfaction"
+    Failure
+    [ plift $ pdataImpl globalRdmr2 -- Redeemer Unit
+    , PlutusTx.toData badCtx1 -- ScriptContext
+    ]
+  testEvalCase
+    "Fail - Insufficient ask"
+    Failure
+    [ plift $ pdataImpl globalRdmr1 -- Redeemer Unit
+    , PlutusTx.toData badCtx2 -- ScriptContext
+    ]
+  testEvalCase
+    "Fail - Not a script input"
+    Failure
+    [ plift $ pdataImpl globalRdmr3 -- Redeemer Unit
+    , PlutusTx.toData badCtx3 -- ScriptContext
+    ]
 
 sampleTestEval :: Term s POpaque
 sampleTestEval =
-  directOrderGlobalLogic
+  directOfferGlobalLogic
     # (pdataImpl globalRdmr1)
     # (pconstant goodCtx1)
+
+puniqueOrderedTests :: TestTree
+puniqueOrderedTests =
+  testGroup
+    "puniqueOrdered"
+    [ testProperty "succeeds on no duplicates" property_puniqueOrdered_successOnNoDuplicates
+    , testProperty "fails on any duplicates" property_puniqueOrdered_errorOnDuplicates
+    ]
+
+property_puniqueOrdered_successOnNoDuplicates :: Property
+property_puniqueOrdered_successOnNoDuplicates = forAll indexList $ fromPFun $ check
+  where
+    indexList :: Gen (TestableTerm (PBuiltinList (PAsData PInteger)))
+    indexList = do
+      n <- chooseInteger (1, 100)
+      s <- sublistOf [1 .. n]
+      l <- shuffle s
+      return $ TestableTerm $ (pmap # (plam pdata) # pconstant l)
+    check :: Term s (PBuiltinList (PAsData PInteger) :--> PBool)
+    check = plam $ \list -> puniqueOrdered # (plam $ pdata) # 0 # list #== list
+
+property_puniqueOrdered_errorOnDuplicates :: Property
+property_puniqueOrdered_errorOnDuplicates = forAll indexList $ fromFailingPPartial $ check
+  where
+    atLeastOneElement [] = [1]
+    atLeastOneElement xs = xs
+    indexList :: Gen (TestableTerm (PBuiltinList (PAsData PInteger)))
+    indexList = do
+      n <- chooseInteger (1, 100)
+      s <- atLeastOneElement <$> sublistOf [1 .. n]
+      r <- chooseInt (0, (length s) - 1)
+      l <- shuffle ((s !! r) : s)
+      return $ TestableTerm $ (pmap # (plam pdata) # pconstant l)
+    check :: Term s (PBuiltinList (PAsData PInteger) :--> POpaque)
+    check = plam $ \list -> popaque $ puniqueOrdered # (plam $ pdata) # 0 # list
