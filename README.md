@@ -36,13 +36,13 @@ Depending on the type of order you use, effects such as slippage may mean you do
 
 ### How can this project facilitate P2P trading?
 
-This project fulfills the conerstone requirement of a trusted Escrow, over seeing the trade in the form of a smart contract. It locks the seller's assets in it until a buyer provides the required ask or the seller wishes to cancel the offer and claim the funds back.
+This project fulfills the cornerstone requirement of a trusted Escrow, over seeing the trade in the form of a smart contract. It locks the seller's assets in the contract until a buyer provides the required ask price or the seller wishes to cancel the offer and claim the funds back.
 
 ### Details
 
 #### Basics of a single offer
 
-A seller sends the assets he wishes to exchange, to the contract, thus locking the funds therein. This UTxO contains a datum which specifies the "creator" of the offer and the assets wished in return, "toBuy" the offered assets.
+A seller sends the assets he wishes to exchange, to the contract, thus locking the funds therein. This UTxO contains a datum which specifies the "creator" of the offer and the assets wished in return, "toBuy" indicates the price.
 ```
 data PDirectOfferDatum (s :: S)
   = PDirectOfferDatum
@@ -56,7 +56,7 @@ data PDirectOfferDatum (s :: S)
       )
 ```
 
-A buyer interested in the offered assets initiates a transaction (with a "PExecuteOffer" redeemer) spending the locked UTxO by sending it to himself, along with sending the "toBuy" assets to the "creator". This condition is validated by the contract first before allowing the transaction to proceed further. However, if the seller decides to cancel the offer he can do so by initiating a transaction (with a "PReclaim" redeemer) and claim all the locked assets back.
+A buyer interested in the offered assets initiates a transaction (with a "PExecuteOffer" redeemer) spending the locked UTxO, along with sending the "toBuy" assets to the "creator". This condition is validated by the contract first before allowing the transaction to proceed further. However, if the seller decides to cancel the offer, he can do so by initiating a transaction (with a "PReclaim" redeemer) and claim all the locked assets back.
 ```
 data PDirectOfferRedeemer (s :: S)
   = PExecuteOffer (Term s (PDataRecord '[]))
