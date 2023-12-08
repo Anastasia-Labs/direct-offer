@@ -127,13 +127,13 @@ develop, build and run packages.
 Download the Git repository:
 
 ```sh
-git clone https://github.com/Anastasia-Labs/direct-order-contracts.git
+git clone https://github.com/Anastasia-Labs/direct-offer.git
 ```
 
 Navigate to the repository directory:
 
 ```sh
-cd direct-order-contracts
+cd direct-offer
 ```
 
 Activate the development environment with Nix:
