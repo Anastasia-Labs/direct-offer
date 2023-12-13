@@ -119,6 +119,21 @@ sh <(curl -L https://nixos.org/nix/install) --daemon
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 ```
 
+Make sure to enable [Nix Flakes](https://nixos.wiki/wiki/Flakes#Enable_flakes) by editing either `~/.config/nix/nix.conf` or `/etc/nix/nix.conf` on
+your machine and add the following configuration entries:
+
+```yaml
+experimental-features = nix-command flakes ca-derivations
+allow-import-from-derivation = true
+```
+
+Optionally, to improve build speed, it is possible to set up binary caches by adding additional configuration entries:
+
+```yaml
+substituters = https://cache.nixos.org https://cache.iog.io https://cache.zw3rk.com
+trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=
+```
+
 ### Building and developing
 
 Once Nix is installed, you should be able to seamlessly use the repository to
